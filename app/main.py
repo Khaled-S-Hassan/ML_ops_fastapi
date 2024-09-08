@@ -1,51 +1,52 @@
+from pydantic import BaseModel # this has nothing to do my machine learning models
+# this is just the parent class for everything that is strictly typed in Pydantic
 from fastapi import FastAPI, Depends, UploadFile, File
-from pydantic import BaseModel  # this is a super class for anythng that is strictly typed in python and has nothing to do with machine learning
 from torchvision import transforms
 from torchvision.models import ResNet
-# This is the python imaging library that is used to read images
+# we need this to upload images to fastAPI
+# this is the Python image library
 from PIL import Image
-import io
 import torch
-import torch.nn.functional as F
-
 from app.model import load_model, load_transforms, CATEGORIES
-
-# this is what we use the BaseModel for
-# The result is strictly typed so that it retuns the predicted category 
-# and the confidence of the prediction
+import torch.nn.functional as F
+import io
+# This is what we use the BaseModel for
+# the result is strictly typed so that it returns
+# a string for the category (label that we predict)
+# and a float for the confidence (the probability for the label)
 class Result(BaseModel):
     category: str
     confidence: float
-
-
+# this creates an instance for the endpoint
 app = FastAPI()
-
-
-@app.post("/predict", response_model=Result)
-
-# this is to make sure that multiple users can use the model at the same time asynchrounously
+@app.get('/')
+def read_root():
+    return {'message': 'This is not supposed to be used like this, use POST'}
+# response_model is a pydantic BaseModel, not a machine learning model
+# is the POST response that we are defining with class Result(BaseModel)
+@app.post('/predict', response_model=Result )
 async def predict(
-        input_image: UploadFile = File(...),
-        model: ResNet = Depends(load_model),
-        transforms: transforms.Compose = Depends(load_transforms)
-) -> Result:
+    # the output of File(...) is assigned to input_image, which is an UploadFile
+    input_image: UploadFile = File(...),
+    # the output of the load_model() function is assigned to model, which is of type ResNet
+    model: ResNet = Depends(load_model),
+    transforms: transforms.Compose = Depends(load_transforms)
+) -> Result: # this arrow specifies that predict() returns a Result object
     # Read the uploaded image
     image = Image.open(io.BytesIO(await input_image.read()))
-
-    # Convert RGBA image to RGB image
+    #convert of RGBA to RGB
     if image.mode == 'RGBA':
-        image = image.convert('RGB')
-
-    # Apply the transformations
-    image = transforms(image).unsqueeze(0)  # Add batch dimension
-
-    # Make the prediction
+        image.convert('RGB')
+    # apply the transformations to the image
+    # we use unsqueeze(0) to define a batch size of 1 to feed the tensor to the model
+    image = transforms(image).unsqueeze(0)
+    #Make the prediction
     with torch.no_grad():
         outputs = model(image)
+        # todo: set up a breakpoint to understand outputs[0] and dim = 0
         probabilities = F.softmax(outputs[0], dim=0)
         confidence, predicted_class = torch.max(probabilities, 0)
-
-    # Map the predicted class index to the category
+    # Predicted label
     category = CATEGORIES[predicted_class.item()]
-
-    return Result(category=category, confidence=confidence.item())
+    return Result(category=category,
+                   confidence=confidence.item())

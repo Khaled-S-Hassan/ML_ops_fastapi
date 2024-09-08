@@ -7,9 +7,9 @@ from torchvision.models import resnet18, ResNet
 
 
 # TODO: remember to remove this when creating the docker image
-from loadotenv import load_env
+# from loadotenv import load_env
 
-load_env(file_loc='/workspaces/ML_ops_fastapi/app/.env')
+# load_env(file_loc='/workspaces/ML_ops_fastapi/app/.env')
 
 # print(os.getenv("WANDB_API_KEY"))
 
