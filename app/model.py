@@ -4,11 +4,14 @@ import wandb
 from torch import nn
 from torchvision import transforms
 from torchvision.models import resnet18, ResNet
+
+
+# TODO: remember to remove this when creating the docker image
 from loadotenv import load_env
 
 load_env(file_loc='/workspaces/ML_ops_fastapi/app/.env')
 
-print(os.getenv("WANDB_API_KEY"))
+# print(os.getenv("WANDB_API_KEY"))
 
 
 #this all caps is to show that these are global constants
@@ -31,6 +34,8 @@ def download_artifact():
     artifact = wandb.Api().artifact(artifact_path, type="model")
     artifact.download(root=MODELS_DIR)
 
+# download_artifact()
+
 
 def get_raw_model() -> ResNet:
     # overwrite final classifier layer with our own output layers
@@ -52,7 +57,7 @@ def load_model() -> ResNet:
     model = get_raw_model()
     model_state_dict_path = os.path.join(MODELS_DIR, MODEL_FILE_NAME)
     model_state_dict = torch.load(model_state_dict_path, map_location="cpu")
-    model.load_state_dict(model_state_dict, strict=False)
+    model.load_state_dict(model_state_dict, strict=True)
     model.eval()
 
     return model
@@ -66,3 +71,6 @@ def load_transforms() -> transforms.Compose:
         transforms.Normalize([0.485, 0.456, 0.406],
                              [0.229, 0.224, 0.225])
     ])
+
+
+load_model()
