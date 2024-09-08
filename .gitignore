@@ -1,7 +1,7 @@
 venv
 models
 *.pyc
-
+app/.env
 
 
 # Byte-compiled / optimized / DLL files
